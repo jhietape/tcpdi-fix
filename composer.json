@@ -1,25 +1,30 @@
 {
-	"name": "propa/tcpdi",
+	"name": "jhietape/tcpdi-fix",
 	"type": "library",
 	"description": "TCPDI is a PHP class for importing PDF to use with TCPDF",
-	"keywords": ["PDF", "tcpdi", "tcpdi_parser", "tcpdf"],
+	"keywords": [
+		"PDF",
+		"tcpdi",
+		"tcpdi_parser",
+		"tcpdf"
+	],
 	"license": "Apache-2.0",
 	"authors": [
-	{
-		"name": "Nicola Asuni",
-		"email": "info@tecnick.com",
-		"homepage": "http://nicolaasuni.tecnick.com"
-	}
+		{
+			"name": "Nicola Asuni",
+			"email": "info@tecnick.com",
+			"homepage": "http://nicolaasuni.tecnick.com"
+		}
 	],
 	"require": {
 		"php": ">=5.3.0",
-        "tecnickcom/tcpdf": "^6.3"
+		"tecnickcom/tcpdf": "^6.3"
 	},
 	"autoload": {
 		"classmap": [
-            "fpdf_tpl.php",
-            "tcpdi.php",
-            "tcpdi_parser.php"
+			"fpdf_tpl.php",
+			"tcpdi.php",
+			"tcpdi_parser.php"
 		]
 	}
 }
