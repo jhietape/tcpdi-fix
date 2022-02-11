@@ -1,3 +1,7 @@
+## This is a fixed version that uses updated pauln/tcdip_parser.php file from here:
+
+https://github.com/LibreSign/tcpdi_parser
+
 TCPDI
 =====
 
