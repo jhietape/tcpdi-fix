@@ -1,4 +1,9 @@
 <?php
+
+namespace LibreSign\TcpdiParser;
+
+use TCPDF_FILTERS;
+
 //============================================================+
 // File name   : tcpdi_parser.php
 // Version     : 1.1
@@ -156,6 +161,7 @@ class tcpdi_parser {
      * @private integer
      */
     private $pageno;
+
     /**
      * PDF version of the loaded document
      * @private string
@@ -252,10 +258,12 @@ class tcpdi_parser {
     function readPages() {
         $params = $this->getObjectVal($this->xref['trailer'][1]['/Root']);
         $objref = null;
-        foreach ($params[1][1] as $k=>$v) {
-            if ($k == '/Pages') {
-                $objref = $v;
-                break;
+        if ($params && !empty($params[1]) && is_array($params[1][1])) {
+            foreach ($params[1][1] as $k=>$v) {
+                if ($k == '/Pages') {
+                    $objref = $v;
+                    break;
+                }
             }
         }
         if ($objref == null || $objref[0] !== PDF_TYPE_OBJREF) {
@@ -348,12 +356,8 @@ class tcpdi_parser {
             // Cross-Reference
             $xref = $this->decodeXref($startxref, $xref);
         } else {
-            try {
-                // Cross-Reference Stream
-                $xref = $this->decodeXrefStream($startxref, $xref);
-            } catch (\Exception $e){
-                $xref = $this->decodeXref($startxref, $xref);
-            }
+            // Cross-Reference Stream
+            $xref = $this->decodeXrefStream($startxref, $xref);
         }
         if (empty($xref)) {
             $this->Error('Unable to find xref');
@@ -709,7 +713,7 @@ class tcpdi_parser {
         $objtype = ''; // object type to be returned
         $objval = ''; // object value to be returned
         // skip initial white space chars: \x00 null (NUL), \x09 horizontal tab (HT), \x0A line feed (LF), \x0C form feed (FF), \x0D carriage return (CR), \x20 space (SP)
-        while (strspn($data[$offset], "\x00\x09\x0a\x0c\x0d\x20") == 1) {
+        while (strspn($data[$offset], "\x00\x09\x0a\x0c\x0d\x20")) {
             $offset++;
         }
         // get first char
@@ -721,8 +725,7 @@ class tcpdi_parser {
                 $next = strcspn($data, "\r\n", $offset);
                 if ($next > 0) {
                     $offset += $next;
-                    list($obj, $unused) = $this->getRawObject($offset, $data);
-                    return $obj;
+                    return $this->getRawObject($offset, $data);
                 }
                 break;
             }
@@ -809,8 +812,11 @@ class tcpdi_parser {
                     if (($char == '<') AND (preg_match('/^([0-9A-Fa-f ]+)[>]/iU', substr($data, $offset), $matches) == 1)) {
                         $objval = $matches[1];
                         $offset += strlen($matches[0]);
-                        unset($matches);
+                    } else if (($char == '<') AND ($endpos = strpos($this->pdfdata, '>', $offset)) !== FALSE) {
+                        $objval = substr($data, $offset,$endpos-$offset);
+                        $offset = $endpos + 1;
                     }
+                    unset($matches);
                 }
                 break;
             }
@@ -888,19 +894,24 @@ class tcpdi_parser {
         $objval = array();
 
         // Extract dict from data.
-        $i=1;
+        $i=2;
         $dict = '';
         $offset += 2;
         do {
             if ($data[$offset] == '>' && $data[$offset+1] == '>') {
-                $i--;
+                $i -= 2;
                 $dict .= '>>';
                 $offset += 2;
             } else if ($data[$offset] == '<' && $data[$offset+1] == '<') {
-                $i++;
+                $i += 2;
                 $dict .= '<<';
                 $offset += 2;
             } else {
+                if ($data[$offset] == '<') {
+                    $i++;
+                } else if ($data[$offset] == '>') {
+                    $i--;
+                }
                 $dict .= $data[$offset];
                 $offset++;
             }
@@ -935,7 +946,7 @@ class tcpdi_parser {
     protected function getIndirectObject($obj_ref, $offset=0, $decoding=true) {
         $obj = explode('_', $obj_ref);
         if (($obj === false) OR (count($obj) != 2)) {
-            $this->Error('Invalid object reference: ' . json_encode($obj));
+            $this->Error('Invalid object reference: '.$obj);
             return;
         }
         $objref = $obj[0].' '.$obj[1].' obj';
@@ -1425,8 +1436,8 @@ class tcpdi_parser {
             if (!isset ($obj[1][1]['/Parent'])) {
                 return false;
             } else {
-                $res = $this->_getPageRotation($obj[1][1]['/Parent']);
-                if (is_array($res) && $res[0] == PDF_TYPE_OBJECT)
+                $res = (array)$this->_getPageRotation($obj[1][1]['/Parent']);
+                if ($res[0] == PDF_TYPE_OBJECT)
                     return $res[1];
                 return $res;
             }
@@ -1441,12 +1452,10 @@ class tcpdi_parser {
      */
     public function Error($msg) {
         // exit program and print error
-        throw new TcpdiParserException($msg);
+        throw new Exception("<strong>TCPDI_PARSER ERROR [{$this->uniqueid}]: </strong>".$msg);
     }
 
 } // END OF TCPDF_PARSER CLASS
-
-class TcpdiParserException extends Exception {}
 
 //============================================================+
 // END OF FILE
